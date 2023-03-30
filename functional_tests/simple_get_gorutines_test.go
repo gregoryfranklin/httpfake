@@ -13,11 +13,12 @@ import (
 // TestSimpleGetWithRutines tests a fake server handling a GET request
 func TestSimpleGetWithRutines(t *testing.T) {
 	numOfRequests := 3
-	fakeService := httpfake.New()
-	defer fakeService.Server.Close()
+	fakeService := httpfake.New(httpfake.WithTesting(t))
+	defer fakeService.Close()
 
 	// register a handler for our fake service
 	fakeService.NewHandler().
+		Times(3).
 		Get("/users").
 		Reply(200).
 		BodyString(`[{"username": "dreamer"}]`)

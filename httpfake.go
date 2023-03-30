@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	netURL "net/url"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -18,7 +19,9 @@ import (
 type HTTPFake struct {
 	Server          *httptest.Server
 	RequestHandlers []*Request
+	exhausted       []*Request
 	t               testing.TB
+	sync.Mutex
 }
 
 // ServerOption provides a functional signature for providing configuration options to the fake server
@@ -52,6 +55,7 @@ func New(opts ...ServerOption) *HTTPFake {
 
 	fake.t = serverOpts.t
 	fake.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fake.Lock()
 		rh, err := fake.findHandler(r)
 		if err != nil {
 			printError(fmt.Sprintf("error finding handler: %v", err))
@@ -74,7 +78,18 @@ func New(opts ...ServerOption) *HTTPFake {
 
 		rh.Lock()
 		rh.called++
+		if rh.called >= rh.maxCalls {
+			handlers := fake.RequestHandlers
+			for i, call := range handlers {
+				if rh == call {
+					fake.RequestHandlers = append(handlers[:i], handlers[i+1:]...)
+					fake.exhausted = append(fake.exhausted, call)
+					break
+				}
+			}
+		}
 		rh.Unlock()
+		fake.Unlock()
 
 		if rh.assertions != nil {
 			if fake.t == nil {
@@ -120,10 +135,9 @@ func (f *HTTPFake) Reset() *HTTPFake {
 // specified for this server was called
 func (f *HTTPFake) Close() {
 	defer f.Server.Close()
-
 	if f.t != nil {
 		for _, reqHandler := range f.RequestHandlers {
-			if reqHandler.called == 0 {
+			if reqHandler.called < reqHandler.minCalls {
 				f.t.Errorf("httpfake: request handler was specified but not called %s", reqHandler.URL.Path)
 			}
 		}

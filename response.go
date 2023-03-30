@@ -47,7 +47,8 @@ func (r *Response) Body(body []byte) *Response {
 
 // BodyString sets the response body from a string
 // Example:
-//     BodyString(`[{"username": "dreamer"}]`)
+//
+//	BodyString(`[{"username": "dreamer"}]`)
 func (r *Response) BodyString(body string) *Response {
 	return r.Body([]byte(body))
 }
@@ -55,7 +56,8 @@ func (r *Response) BodyString(body string) *Response {
 // BodyStruct sets the response body from a struct.
 // The provided struct will be marsheled to json internally.
 // Example:
-//     BodyStruct(&entity.User{UserName: "dreamer"})
+//
+//	BodyStruct(&entity.User{UserName: "dreamer"})
 func (r *Response) BodyStruct(body interface{}) *Response {
 	b, err := json.Marshal(body)
 	if err != nil {

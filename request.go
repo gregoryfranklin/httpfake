@@ -19,6 +19,8 @@ type Request struct {
 	CustomHandle Responder
 	assertions   []Assertor
 	called       int
+	minCalls     int
+	maxCalls     int
 }
 
 // NewRequest creates a new Request
@@ -27,6 +29,8 @@ func NewRequest() *Request {
 		URL:      &url.URL{},
 		Response: NewResponse(),
 		called:   0,
+		minCalls: 1,
+		maxCalls: 1,
 	}
 }
 
@@ -70,6 +74,32 @@ func (r *Request) Handle(handle Responder) {
 // And returns the Response struct to allow chaining the response settings
 func (r *Request) Reply(status int) *Response {
 	return r.Response.Status(status)
+}
+
+func (r *Request) AnyTimes() *Request {
+	r.minCalls, r.maxCalls = 0, 1e8 // close enough to infinity
+	return r
+}
+
+func (r *Request) MinTimes(n int) *Request {
+	r.minCalls = n
+	if r.maxCalls == 1 {
+		r.maxCalls = 1e8
+	}
+	return r
+}
+
+func (r *Request) MaxTimes(n int) *Request {
+	r.maxCalls = n
+	if r.minCalls == 1 {
+		r.minCalls = 0
+	}
+	return r
+}
+
+func (r *Request) Times(n int) *Request {
+	r.minCalls, r.maxCalls = n, n
+	return r
 }
 
 func (r *Request) method(method, path string) *Request {
